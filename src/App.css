@@ -1,0 +1,398 @@
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2ecc71;
+  --dark-color: #1a1a1a;        /* Darker background */
+  --light-color: #f5f5f5;
+  --danger-color: #e74c3c;
+  --switch-on: #2ecc71;
+  --switch-off: #e74c3c;
+  --switch-handle: #fff;
+  --card-bg: #2d2d2d;           /* Dark card background */
+  --text-color: #b58686;         /* Light text */
+  --gauge-track: #3a3a3a;        /* Dark gauge track */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card-bg: #2c3e50;
+    --text-color: #ecf0f1;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: #f5f5f5;
+}
+
+.App {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.App-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .dashboard {
+    flex-direction: row;
+  }
+  
+  .switches-panel {
+    flex: 1;
+  }
+  
+  .sensors-panel {
+    flex: 2;
+  }
+}
+
+.switches-panel, .sensors-panel {
+  background-color: var(--card-bg);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.switches-panel h2, .sensors-panel h2 {
+  margin-bottom: 20px;
+  color: var(--primary-color);
+}
+
+.switch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.switch-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.switch-label {
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.switch {
+  position: relative;
+  width: 60px;
+  height: 30px;
+  border-radius: 15px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.switch.on {
+  background-color: var(--switch-on);
+}
+
+.switch.off {
+  background-color: var(--switch-off);
+}
+
+.switch-handle {
+  position: absolute;
+  top: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--switch-handle);
+  transition: transform 0.3s;
+}
+
+.switch.on .switch-handle {
+  transform: translateX(30px);
+}
+
+.switch.off .switch-handle {
+  transform: translateX(3px);
+}
+
+.main-switch-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.large-switch-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.large-switch-label {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.large-switch {
+  position: relative;
+  width: 100px;
+  height: 50px;
+  border-radius: 25px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.large-switch.on {
+  background-color: var(--switch-on);
+}
+
+.large-switch.off {
+  background-color: var(--switch-off);
+}
+
+.large-switch-handle {
+  position: absolute;
+  top: 5px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--switch-handle);
+  transition: transform 0.3s;
+}
+
+.large-switch.on .large-switch-handle {
+  transform: translateX(50px);
+}
+
+.large-switch.off .large-switch-handle {
+  transform: translateX(5px);
+}
+
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.sensor-card {
+  background-color: var(--card-bg);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sensor-card h3 {
+  margin-bottom: 15px;
+  color: var(--secondary-color);
+}
+
+.sensor-gauges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.gauge-container {
+  flex: 1;
+  min-width: 100px;
+}
+
+.gauge-label {
+  text-align: center;
+  font-size: 0.8rem;
+  margin-top: 5px;
+}
+
+.sensor-info {
+  font-size: 0.8rem;
+  color: #777;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 767px) {
+  .switch-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .sensor-grid {
+    grid-template-columns: 1fr;
+  }
+/* Sensor Row */
+.sensor-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Compact Sensor Cards */
+.sensor-card.compact {
+  flex: 1;
+  min-width: 100px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 6px;
+}
+
+.sensor-card.compact h3 {
+  font-size: 0.9rem;
+  margin: 0 0 8px 0;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.compact-values {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compact-metric {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.85rem;
+}
+
+.compact-update {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: #777;
+  margin-top: 4px;
+}
+
+/* Motion sensors row */
+.motion-sensors {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: var(--card-bg);
+  border-radius: 8px;
+}
+
+.motion-sensor {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(255, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.motion-sensor.active {
+  background: rgba(0, 255, 0, 0.1);
+}
+
+.motion-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.motion-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f44336;
+  box-shadow: 0 0 5px #f44336;
+}
+
+.motion-sensor.active .motion-light {
+  background: #4CAF50;
+  box-shadow: 0 0 5px #4CAF50;
+}
+
+.motion-update {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  color: #777;
+}
+
+/* Connection Status */
+.connection-status[data-status="Connected"] {
+  color: #4CAF50;
+}
+.connection-status[data-status="Disconnected"] {
+  color: #F44336;
+}
+
+/* Motion sensors row */
+.motion-sensors {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: var(--card-bg);
+  border-radius: 8px;
+}
+
+.motion-sensor {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(255, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.motion-sensor.active {
+  background: rgba(0, 255, 0, 0.1);
+}
+
+.motion-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.motion-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f44336;
+  box-shadow: 0 0 5px #f44336;
+}
+
+.motion-sensor.active .motion-light {
+  background: #4CAF50;
+  box-shadow: 0 0 5px #4CAF50;
+}
+
+.motion-update {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  color: #777;
+}
+
+
+}
