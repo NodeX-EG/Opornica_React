@@ -8,24 +8,16 @@ class MQTTService {
   constructor() {
     this.client = null;
     this.subscribers = new Set();
-    this.reconnectAttempts = 0;
-    this.MAX_RECONNECT_ATTEMPTS = 5;
-
-    // Initialize all sensors with default values
+    
+    // Initialize with renamed sensors
     const storedData = localStorage.getItem(STORAGE_KEY);
-    const defaultData = {
-      // Environment sensors
-      11: { name: "Living Room", temperature: 0, humidity: 0, pressure: 0, lastUpdate: "Never" },
-      15: { name: "Bedroom", temperature: 0, humidity: 0, pressure: 0, lastUpdate: "Never" },
-      25: { name: "Kitchen", temperature: 0, humidity: 0, lastUpdate: "Never" },
-      
-      // Motion sensors
-      26: { name: "Prizemlje", motion: false, lastUpdate: "Never" },
-      12: { name: "Sprat", motion: false, lastUpdate: "Never" }
+    this.sensorData = storedData ? JSON.parse(storedData) : {
+      11: { name: "Dnevna soba", temperature: 0, humidity: 0, pressure: 0, lastUpdate: "Nikad" },
+      15: { name: "Spavaća soba", temperature: 0, humidity: 0, pressure: 0, lastUpdate: "Nikad" },
+      25: { name: "Kuhinja", temperature: 0, humidity: 0, lastUpdate: "Nikad" },
+      12: { name: "Sprat", motion: false, lastUpdate: "Nikad" },  // Changed from "Front Door"
+      26: { name: "Prizemlje", motion: false, lastUpdate: "Nikad" }  // Changed from "Back Door"
     };
-
-    // Merge stored data with defaults
-    this.sensorData = storedData ? { ...defaultData, ...JSON.parse(storedData) } : defaultData;
   }
 
   connect() {
@@ -36,44 +28,32 @@ class MQTTService {
 
     this.client.on('connect', () => {
       console.log('✅ Connected to MQTT Broker');
-      this.reconnectAttempts = 0;
       this.client.subscribe(TOPIC, (err) => {
         if (err) console.error('Subscription error:', err);
+        else console.log(`Subscribed to ${TOPIC}`);
       });
     });
 
     this.client.on('message', (topic, message) => {
+      console.log('📡 Received:', message.toString());
       const data = this.parseMessage(message.toString());
       if (data) {
+        const now = new Date().toLocaleTimeString();
         this.sensorData[data.nodeId] = {
           ...this.sensorData[data.nodeId],
           ...data,
-          lastUpdate: new Date().toLocaleTimeString()
+          lastUpdate: now
         };
+        console.log('🔄 Updated:', data.nodeId, this.sensorData[data.nodeId]);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.sensorData));
-        this.notifySubscribers(this.sensorData);
+        this.notifySubscribers();
       }
     });
 
-    this.client.on('error', (err) => {
-      console.error('❌ MQTT Error:', err);
-    });
-
-    this.client.on('offline', () => {
-      console.log('🔌 MQTT Offline');
-    });
-
-    this.client.on('reconnect', () => {
-      this.reconnectAttempts++;
-      console.log(`Attempting reconnect (${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})`);
-      if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
-        console.error('Max reconnection attempts reached');
-      }
-    });
+    this.client.on('error', (err) => console.error('MQTT Error:', err));
   }
 
   parseMessage(rawMessage) {
-    console.log("Raw message:", rawMessage);
     const parts = rawMessage.split(';');
     if (parts.length < 6) return null;
 
@@ -81,7 +61,7 @@ class MQTTService {
     const childId = parseInt(parts[1]);
     const payload = parts[5];
 
-    // Handle motion sensors (nodes 12 and 26)
+    // Motion sensors (nodes 12 and 26)
     if (nodeId === 12 || nodeId === 26) {
       return {
         nodeId,
@@ -90,7 +70,7 @@ class MQTTService {
       };
     }
 
-    // Handle environment sensors
+    // Environment sensors
     if ([0, 1, 2].includes(childId)) {
       const value = parseFloat(payload);
       if (isNaN(value)) return null;
@@ -112,8 +92,9 @@ class MQTTService {
     return () => this.subscribers.delete(callback);
   }
 
-  notifySubscribers(data) {
-    this.subscribers.forEach(callback => callback({ sensorData: data }));
+  notifySubscribers() {
+    console.log('🔔 Notifying', this.subscribers.size, 'subscribers');
+    this.subscribers.forEach(callback => callback({ sensorData: this.sensorData }));
   }
 
   getInitialData() {
@@ -123,7 +104,7 @@ class MQTTService {
   disconnect() {
     if (this.client) {
       this.client.end();
-      console.log('🔌 Disconnected from MQTT broker');
+      console.log('🔌 Disconnected from MQTT');
     }
   }
 }

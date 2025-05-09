@@ -7,18 +7,18 @@ import LargeSwitch from './LargeSwitch';
 
 const Layout = () => {
   const [sensorData, setSensorData] = useState(mqttService.getInitialData());
-  const [connectionStatus, setConnectionStatus] = useState('Connecting...');
+  const [connectionStatus, setConnectionStatus] = useState('Povezivanje...');
   
   const [switches] = useState([
-    { id: "light1", label: "Living Room Light", nodeId: 10, childId: 1 },
-    { id: "light2", label: "Bedroom Light", nodeId: 10, childId: 2 },
-    { id: "light3", label: "Kitchen Light", nodeId: 10, childId: 3 },
-    { id: "fan1", label: "Living Room Fan", nodeId: 11, childId: 1 },
-    { id: "fan2", label: "Bedroom Fan", nodeId: 11, childId: 2 },
-    { id: "ac", label: "Air Conditioner", nodeId: 12, childId: 1 },
-    { id: "heater", label: "Heater", nodeId: 12, childId: 2 },
+    { id: "light1", label: "Svjetlo - Dnevna soba", nodeId: 10, childId: 1 },
+    { id: "light2", label: "Svjetlo - Spavaća soba", nodeId: 10, childId: 2 },
+    { id: "light3", label: "Svjetlo - Kuhinja", nodeId: 10, childId: 3 },
+    { id: "fan1", label: "Ventilator - Dnevna", nodeId: 11, childId: 1 },
+    { id: "fan2", label: "Ventilator - Spavaća", nodeId: 11, childId: 2 },
+    { id: "ac", label: "Klima", nodeId: 12, childId: 1 },
+    { id: "heater", label: "Grijač", nodeId: 12, childId: 2 },
     { id: "tv", label: "TV", nodeId: 13, childId: 1 },
-    { id: "sound", label: "Sound System", nodeId: 13, childId: 2 },
+    { id: "sound", label: "Zvučnici", nodeId: 13, childId: 2 },
     { id: "router", label: "Router", nodeId: 14, childId: 1 }
   ]);
 
@@ -28,18 +28,29 @@ const Layout = () => {
 
   useEffect(() => {
     const handleDataUpdate = (data) => {
-      if (data.sensorData) setSensorData(data.sensorData);
+      console.log('🔄 React received update:', data.sensorData);
+      setSensorData(prev => ({ ...prev, ...data.sensorData }));
     };
 
     const unsubscribe = mqttService.subscribe(handleDataUpdate);
     mqttService.connect();
 
-    mqttService.client.on('connect', () => setConnectionStatus('Connected'));
-    mqttService.client.on('reconnect', () => setConnectionStatus('Reconnecting...'));
-    mqttService.client.on('offline', () => setConnectionStatus('Disconnected'));
+    // Connection status handlers
+    const statusHandlers = {
+      connect: () => setConnectionStatus('Povezano'),
+      reconnect: () => setConnectionStatus('Ponovno povezivanje...'),
+      offline: () => setConnectionStatus('Diskonektovano')
+    };
+
+    Object.entries(statusHandlers).forEach(([event, handler]) => {
+      mqttService.client.on(event, handler);
+    });
 
     return () => {
       unsubscribe();
+      Object.entries(statusHandlers).forEach(([event, handler]) => {
+        mqttService.client.off(event, handler);
+      });
       mqttService.disconnect();
     };
   }, []);
@@ -49,7 +60,7 @@ const Layout = () => {
     const switchConfig = switches.find(sw => sw.id === id);
     if (switchConfig) {
       const message = `${switchConfig.nodeId};${switchConfig.childId};1;0;2;${newState ? '1' : '0'}`;
-      console.log(`Sending MQTT command: ${message}`);
+      console.log(`✉️ Sending MQTT: ${message}`);
     }
   };
 
@@ -59,22 +70,22 @@ const Layout = () => {
         {connectionStatus}
       </div>
 
-      {/* Environment sensors row */}
+      {/* Environment sensors */}
       <div className="sensor-row">
         <SensorCard compact {...sensorData[11]} />
         <SensorCard compact {...sensorData[15]} />
         <SensorCard compact {...sensorData[25]} />
       </div>
 
-      {/* Motion sensors row */}
+      {/* Motion sensors - now with Serbian names */}
       <div className="motion-sensors">
         <MotionSensor {...sensorData[12]} />
         <MotionSensor {...sensorData[26]} />
       </div>
 
-      {/* Control panels */}
+      {/* Controls */}
       <div className="switches-panel">
-        <h2>Controls</h2>
+        <h2>Kontrole</h2>
         <div className="switch-grid">
           {switches.map(sw => (
             <Switch 
@@ -89,7 +100,7 @@ const Layout = () => {
         <div className="main-switch-container">
           <LargeSwitch 
             id="main-power"
-            label="MAIN POWER"
+            label="GLAVNI PREKIDAČ"
             onToggle={handleSwitchToggle}
           />
         </div>
