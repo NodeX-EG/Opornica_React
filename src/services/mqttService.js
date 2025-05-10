@@ -1,23 +1,58 @@
 import mqtt from 'mqtt';
+import defaults from './sensorDefaults.json';
 
 const MQTT_BROKER = 'ws://192.168.1.101:9001';
 const TOPIC = 'sensors-NodeRed/raw';
 const STORAGE_KEY = 'mqttSensorData';
+const API_URL = 'http://192.168.1.101:3001/api/sensor-values';
 
 class MQTTService {
   constructor() {
     this.client = null;
     this.subscribers = new Set();
-    
-    // Initialize with renamed sensors
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    this.sensorData = storedData ? JSON.parse(storedData) : {
-      11: { name: "Dnevna soba", temperature: 0, humidity: 0, pressure: 0, lastUpdate: "Nikad" },
-      15: { name: "Spavaća soba", temperature: 0, humidity: 0, pressure: 0, lastUpdate: "Nikad" },
-      25: { name: "Kuhinja", temperature: 0, humidity: 0, lastUpdate: "Nikad" },
-      12: { name: "Sprat", motion: false, lastUpdate: "Nikad" },  // Changed from "Front Door"
-      26: { name: "Prizemlje", motion: false, lastUpdate: "Nikad" }  // Changed from "Back Door"
-    };
+    this.sensorData = JSON.parse(JSON.stringify(defaults)); // Deep clone defaults
+    this.initialize();
+  }
+
+  async initialize() {
+    try {
+      // 1. Try to load from server
+      const serverData = await this.fetchServerData();
+      if (serverData) {
+        this.mergeSensorData(serverData);
+      }
+
+      // 2. Try to load from localStorage
+      const localData = localStorage.getItem(STORAGE_KEY);
+      if (localData) {
+        this.mergeSensorData(JSON.parse(localData));
+      }
+
+      console.log('Initialized sensor data:', this.sensorData);
+    } catch (error) {
+      console.error('Initialization error:', error);
+    }
+  }
+
+  async fetchServerData() {
+    try {
+      const response = await fetch(API_URL);
+      if (response.ok) return await response.json();
+    } catch (error) {
+      console.log('Server unavailable, using local data');
+    }
+    return null;
+  }
+
+  mergeSensorData(newData) {
+    Object.keys(newData).forEach(nodeId => {
+      if (this.sensorData[nodeId]) {
+        this.sensorData[nodeId] = {
+          ...this.sensorData[nodeId],
+          ...newData[nodeId]
+        };
+      }
+    });
   }
 
   connect() {
@@ -28,62 +63,70 @@ class MQTTService {
 
     this.client.on('connect', () => {
       console.log('✅ Connected to MQTT Broker');
-      this.client.subscribe(TOPIC, (err) => {
-        if (err) console.error('Subscription error:', err);
-        else console.log(`Subscribed to ${TOPIC}`);
-      });
+      this.client.subscribe(TOPIC);
     });
 
     this.client.on('message', (topic, message) => {
-      console.log('📡 Received:', message.toString());
       const data = this.parseMessage(message.toString());
       if (data) {
-        const now = new Date().toLocaleTimeString();
-        this.sensorData[data.nodeId] = {
-          ...this.sensorData[data.nodeId],
-          ...data,
-          lastUpdate: now
-        };
-        console.log('🔄 Updated:', data.nodeId, this.sensorData[data.nodeId]);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.sensorData));
-        this.notifySubscribers();
+        this.updateSensor(data);
       }
     });
-
-    this.client.on('error', (err) => console.error('MQTT Error:', err));
   }
 
   parseMessage(rawMessage) {
     const parts = rawMessage.split(';');
     if (parts.length < 6) return null;
 
-    const nodeId = parseInt(parts[0]);
+    const nodeId = parts[0];
     const childId = parseInt(parts[1]);
     const payload = parts[5];
+    const timestamp = new Date().toLocaleTimeString();
 
-    // Motion sensors (nodes 12 and 26)
-    if (nodeId === 12 || nodeId === 26) {
+    // Motion sensors
+    if (nodeId === '12' || nodeId === '26') {
       return {
         nodeId,
         motion: payload === '1',
-        lastUpdate: new Date().toLocaleTimeString()
+        lastUpdate: timestamp
       };
     }
 
     // Environment sensors
-    if ([0, 1, 2].includes(childId)) {
-      const value = parseFloat(payload);
-      if (isNaN(value)) return null;
+    const value = parseFloat(payload);
+    if (isNaN(value)) return null;
 
-      const data = { nodeId };
-      if (childId === 0) data.temperature = value;
-      else if (childId === 1) data.pressure = value;
-      else if (childId === 2) data.humidity = value;
+    const data = { nodeId, lastUpdate: timestamp };
+    if (childId === 0) data.temperature = value;
+    else if (childId === 1) data.pressure = value;
+    else if (childId === 2) data.humidity = value;
 
-      return data;
+    return data;
+  }
+
+  updateSensor(newData) {
+    const nodeId = newData.nodeId;
+    this.sensorData[nodeId] = {
+      ...this.sensorData[nodeId],
+      ...newData
+    };
+
+    // Persist changes
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.sensorData));
+    this.notifySubscribers();
+    this.syncWithServer();
+  }
+
+  async syncWithServer() {
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.sensorData)
+      });
+    } catch (error) {
+      console.error('Sync failed:', error);
     }
-
-    return null;
   }
 
   subscribe(callback) {
@@ -93,12 +136,7 @@ class MQTTService {
   }
 
   notifySubscribers() {
-    console.log('🔔 Notifying', this.subscribers.size, 'subscribers');
     this.subscribers.forEach(callback => callback({ sensorData: this.sensorData }));
-  }
-
-  getInitialData() {
-    return this.sensorData;
   }
 
   disconnect() {
