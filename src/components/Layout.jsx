@@ -6,7 +6,7 @@ import Switch from './Switch';
 import LargeSwitch from './LargeSwitch';
 
 const Layout = () => {
-  const [sensorData, setSensorData] = useState(mqttService.getInitialData());
+  const [sensorData, setSensorData] = useState(mqttService.sensorData);
   const [connectionStatus, setConnectionStatus] = useState('Povezivanje...');
   
   const [switches] = useState([
@@ -28,14 +28,12 @@ const Layout = () => {
 
   useEffect(() => {
     const handleDataUpdate = (data) => {
-      console.log('🔄 React received update:', data.sensorData);
       setSensorData(prev => ({ ...prev, ...data.sensorData }));
     };
 
     const unsubscribe = mqttService.subscribe(handleDataUpdate);
     mqttService.connect();
 
-    // Connection status handlers
     const statusHandlers = {
       connect: () => setConnectionStatus('Povezano'),
       reconnect: () => setConnectionStatus('Ponovno povezivanje...'),
@@ -43,13 +41,13 @@ const Layout = () => {
     };
 
     Object.entries(statusHandlers).forEach(([event, handler]) => {
-      mqttService.client.on(event, handler);
+      mqttService.client?.on(event, handler);
     });
 
     return () => {
       unsubscribe();
       Object.entries(statusHandlers).forEach(([event, handler]) => {
-        mqttService.client.off(event, handler);
+        mqttService.client?.off(event, handler);
       });
       mqttService.disconnect();
     };
@@ -70,20 +68,17 @@ const Layout = () => {
         {connectionStatus}
       </div>
 
-      {/* Environment sensors */}
       <div className="sensor-row">
         <SensorCard compact {...sensorData[11]} />
         <SensorCard compact {...sensorData[15]} />
         <SensorCard compact {...sensorData[25]} />
       </div>
 
-      {/* Motion sensors - now with Serbian names */}
       <div className="motion-sensors">
         <MotionSensor {...sensorData[12]} />
         <MotionSensor {...sensorData[26]} />
       </div>
 
-      {/* Controls */}
       <div className="switches-panel">
         <h2>Kontrole</h2>
         <div className="switch-grid">
