@@ -1,32 +1,22 @@
 {
     "11": {
-      "name": "Dnevna soba",
+      "name": "Sprat",
       "temperature": 22.0,
       "humidity": 45,
       "pressure": 1013,
       "lastUpdate": "Nikad"
     },
     "15": {
-      "name": "Spavaća soba",
+      "name": "Spolja",
       "temperature": 20.5,
       "humidity": 50,
       "pressure": 1012,
       "lastUpdate": "Nikad"
     },
     "25": {
-      "name": "Kuhinja",
+      "name": "Podrum",
       "temperature": 23.5,
       "humidity": 40,
-      "lastUpdate": "Nikad"
-    },
-    "12": {
-      "name": "Sprat",
-      "motion": false,
-      "lastUpdate": "Nikad"
-    },
-    "26": {
-      "name": "Prizemlje",
-      "motion": false,
       "lastUpdate": "Nikad"
     }
   }

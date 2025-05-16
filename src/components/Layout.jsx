@@ -8,18 +8,18 @@ import LargeSwitch from './LargeSwitch';
 const Layout = () => {
   const [sensorData, setSensorData] = useState(mqttService.sensorData);
   const [connectionStatus, setConnectionStatus] = useState('Povezivanje...');
-  
+
   const [switches] = useState([
-    { id: "light1", label: "Svjetlo - Dnevna soba", nodeId: 10, childId: 1 },
-    { id: "light2", label: "Svjetlo - Spavaća soba", nodeId: 10, childId: 2 },
-    { id: "light3", label: "Svjetlo - Kuhinja", nodeId: 10, childId: 3 },
-    { id: "fan1", label: "Ventilator - Dnevna", nodeId: 11, childId: 1 },
-    { id: "fan2", label: "Ventilator - Spavaća", nodeId: 11, childId: 2 },
-    { id: "ac", label: "Klima", nodeId: 12, childId: 1 },
-    { id: "heater", label: "Grijač", nodeId: 12, childId: 2 },
-    { id: "tv", label: "TV", nodeId: 13, childId: 1 },
-    { id: "sound", label: "Zvučnici", nodeId: 13, childId: 2 },
-    { id: "router", label: "Router", nodeId: 14, childId: 1 }
+    { id: "light1", label: "Sprat - Dnevna Soba", nodeId: 10, childId: 1 },
+    { id: "light2", label: "2", nodeId: 10, childId: 2 },
+    { id: "light3", label: "3", nodeId: 10, childId: 3 },
+    { id: "fan1", label: "4", nodeId: 11, childId: 1 },
+    { id: "fan2", label: "5", nodeId: 11, childId: 2 },
+    { id: "ac", label: "6", nodeId: 12, childId: 1 },
+    { id: "heater", label: "7", nodeId: 12, childId: 2 },
+    { id: "tv", label: "8", nodeId: 13, childId: 1 },
+    { id: "sound", label: "9", nodeId: 13, childId: 2 },
+    { id: "router", label: "10", nodeId: 14, childId: 1 }
   ]);
 
   const [switchStates, setSwitchStates] = useState(
@@ -58,6 +58,7 @@ const Layout = () => {
     const switchConfig = switches.find(sw => sw.id === id);
     if (switchConfig) {
       const message = `${switchConfig.nodeId};${switchConfig.childId};1;0;2;${newState ? '1' : '0'}`;
+      mqttService.publishToControlBroker(message);
       console.log(`✉️ Sending MQTT: ${message}`);
     }
   };

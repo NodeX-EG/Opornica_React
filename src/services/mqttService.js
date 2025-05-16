@@ -1,14 +1,17 @@
 import mqtt from 'mqtt';
 import defaults from './sensorDefaults.json';
 
-const MQTT_BROKER = 'ws://192.168.1.101:9001';
-const TOPIC = 'sensors-NodeRed/raw';
+const MQTT_RECEIVE_BROKER = 'ws://192.168.1.101:9001';
+const MQTT_PUBLISH_BROKER = 'ws://192.168.1.101:9001';
+const RECEIVE_TOPIC = 'sensors-NodeRed/raw';
+const PUBLISH_TOPIC = 'OPO-SEC-Link1';
 const STORAGE_KEY = 'mqttSensorData';
 const API_URL = 'http://192.168.1.101:3001/api/sensor-values';
 
 class MQTTService {
   constructor() {
-    this.client = null;
+    this.client = null; // for receiving
+    this.publishClient = null; // for sending
     this.subscribers = new Set();
     this.sensorData = JSON.parse(JSON.stringify(defaults)); // Deep clone defaults
     this.initialize();
@@ -16,17 +19,11 @@ class MQTTService {
 
   async initialize() {
     try {
-      // 1. Try to load from server
       const serverData = await this.fetchServerData();
-      if (serverData) {
-        this.mergeSensorData(serverData);
-      }
+      if (serverData) this.mergeSensorData(serverData);
 
-      // 2. Try to load from localStorage
       const localData = localStorage.getItem(STORAGE_KEY);
-      if (localData) {
-        this.mergeSensorData(JSON.parse(localData));
-      }
+      if (localData) this.mergeSensorData(JSON.parse(localData));
 
       console.log('Initialized sensor data:', this.sensorData);
     } catch (error) {
@@ -56,23 +53,49 @@ class MQTTService {
   }
 
   connect() {
-    this.client = mqtt.connect(MQTT_BROKER, {
+    // Incoming messages
+    this.client = mqtt.connect(MQTT_RECEIVE_BROKER, {
       reconnectPeriod: 5000,
       connectTimeout: 3000
     });
 
     this.client.on('connect', () => {
-      console.log('✅ Connected to MQTT Broker');
-      this.client.subscribe(TOPIC);
+      console.log('✅ Connected to MQTT Broker for receiving');
+      this.client.subscribe(RECEIVE_TOPIC);
     });
 
     this.client.on('message', (topic, message) => {
       const data = this.parseMessage(message.toString());
-      if (data) {
-        this.updateSensor(data);
-      }
+      if (data) this.updateSensor(data);
+    });
+
+    // Outgoing messages
+    this.publishClient = mqtt.connect(MQTT_PUBLISH_BROKER, {
+      reconnectPeriod: 5000,
+      connectTimeout: 3000
+    });
+
+    this.publishClient.on('connect', () => {
+      console.log('📤 Connected to MQTT Broker for publishing');
     });
   }
+
+  /**
+   * ✅ Use this to send control messages (e.g., switch toggles)
+   */
+  publishToControlBroker(message) {
+    if (this.publishClient && this.publishClient.connected) {
+      this.publishClient.publish(PUBLISH_TOPIC, message, {}, err => {
+        if (err) {
+          console.error('❌ Error publishing:', err);
+        } else {
+          console.log(`📤 Published to ${PUBLISH_TOPIC}:`, message);
+        }
+      });
+    } else {
+      console.warn('⚠️ Publish client not connected. Message not sent:', message);
+    }
+  }  
 
   parseMessage(rawMessage) {
     const parts = rawMessage.split(';');
@@ -111,7 +134,6 @@ class MQTTService {
       ...newData
     };
 
-    // Persist changes
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.sensorData));
     this.notifySubscribers();
     this.syncWithServer();
@@ -142,7 +164,11 @@ class MQTTService {
   disconnect() {
     if (this.client) {
       this.client.end();
-      console.log('🔌 Disconnected from MQTT');
+      console.log('🔌 Disconnected from receive broker');
+    }
+    if (this.publishClient) {
+      this.publishClient.end();
+      console.log('🔌 Disconnected from publish broker');
     }
   }
 }
