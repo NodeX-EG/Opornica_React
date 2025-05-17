@@ -11,7 +11,7 @@ const Layout = () => {
 
   const [switches] = useState([
     { id: "light1", label: "Sprat - Dnevna Soba", nodeId: 10, childId: 1 },
-    { id: "light2", label: "2", nodeId: 10, childId: 2 },
+    { id: "light2", label: "Staza A", nodeId: 18, childId: 1 },
     { id: "light3", label: "3", nodeId: 10, childId: 3 },
     { id: "fan1", label: "4", nodeId: 11, childId: 1 },
     { id: "fan2", label: "5", nodeId: 11, childId: 2 },
