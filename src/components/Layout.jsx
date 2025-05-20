@@ -1,3 +1,4 @@
+// layout.jsx
 import React, { useState, useEffect } from 'react';
 import mqttService from '../services/mqttService';
 import SensorCard from './SensorCard';
@@ -23,7 +24,7 @@ const Layout = () => {
   ]);
 
   const [switchStates, setSwitchStates] = useState(
-    switches.reduce((acc, sw) => ({ ...acc, [sw.id]: false }), {})
+    () => mqttService.switchStates || switches.reduce((acc, sw) => ({ ...acc, [sw.id]: false }), {})
   );
 
   useEffect(() => {
@@ -53,8 +54,17 @@ const Layout = () => {
     };
   }, []);
 
+  useEffect(() => {
+    mqttService.updateSwitchStates(switchStates);
+  }, [switchStates]);
+
   const handleSwitchToggle = (id, newState) => {
-    setSwitchStates(prev => ({ ...prev, [id]: newState }));
+    setSwitchStates(prev => {
+      const updated = { ...prev, [id]: newState };
+      mqttService.updateSwitchStates(updated);
+      return updated;
+    });
+
     const switchConfig = switches.find(sw => sw.id === id);
     if (switchConfig) {
       const message = `${switchConfig.nodeId};${switchConfig.childId};1;0;2;${newState ? '1' : '0'}`;

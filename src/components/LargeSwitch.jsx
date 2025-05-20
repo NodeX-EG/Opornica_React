@@ -1,25 +1,31 @@
-import React, { useState } from 'react';
+// LargeSwitch.jsx
+import React, { useState, useEffect } from 'react';
 
-const LargeSwitch = ({ id, label, initialState = false, onToggle }) => {
-  const [isOn, setIsOn] = useState(initialState);
+const LargeSwitch = ({ id, label, onToggle }) => {
+  const [isOn, setIsOn] = useState(false);
 
-  const handleToggle = () => {
+  useEffect(() => {
+    const savedState = localStorage.getItem(`switch_${id}`);
+    if (savedState !== null) {
+      const parsed = savedState === 'true';
+      setIsOn(parsed);
+      onToggle(id, parsed);
+    }
+  }, [id, onToggle]);
+
+  const handleChange = () => {
     const newState = !isOn;
     setIsOn(newState);
-    if (onToggle) onToggle(id, newState);
+    localStorage.setItem(`switch_${id}`, newState);
+    onToggle(id, newState);
   };
 
   return (
-    <div className="large-switch-container">
-      <label htmlFor={id} className="large-switch-label">{label}</label>
-      <button
-        id={id}
-        className={`large-switch ${isOn ? 'on' : 'off'}`}
-        onClick={handleToggle}
-        aria-label={`Toggle ${label}`}
-      >
-        <span className="large-switch-handle" />
-      </button>
+    <div className={`large-switch ${isOn ? 'on' : 'off'}`} onClick={handleChange}>
+      <label>{label}</label>
+      <div className="toggle large">
+        <div className="slider" />
+      </div>
     </div>
   );
 };

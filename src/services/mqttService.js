@@ -1,3 +1,4 @@
+// mqttService.js
 import mqtt from 'mqtt';
 import defaults from './sensorDefaults.json';
 
@@ -6,14 +7,16 @@ const MQTT_PUBLISH_BROKER = 'ws://192.168.1.101:9001';
 const RECEIVE_TOPIC = 'sensors-NodeRed/raw';
 const PUBLISH_TOPIC = 'OPO-SEC-Link1';
 const STORAGE_KEY = 'mqttSensorData';
+const STORAGE_SWITCH_KEY = 'mqttSwitchStates';
 const API_URL = 'http://192.168.1.101:3001/api/sensor-values';
 
 class MQTTService {
   constructor() {
-    this.client = null; // for receiving
-    this.publishClient = null; // for sending
+    this.client = null;
+    this.publishClient = null;
     this.subscribers = new Set();
-    this.sensorData = JSON.parse(JSON.stringify(defaults)); // Deep clone defaults
+    this.sensorData = JSON.parse(JSON.stringify(defaults));
+    this.switchStates = {}; // NEW
     this.initialize();
   }
 
@@ -25,7 +28,12 @@ class MQTTService {
       const localData = localStorage.getItem(STORAGE_KEY);
       if (localData) this.mergeSensorData(JSON.parse(localData));
 
-      console.log('Initialized sensor data:', this.sensorData);
+      const localSwitch = localStorage.getItem(STORAGE_SWITCH_KEY);
+      if (localSwitch) {
+        this.switchStates = JSON.parse(localSwitch);
+      }
+
+      console.log('Initialized sensor + switch data:', this.sensorData, this.switchStates);
     } catch (error) {
       console.error('Initialization error:', error);
     }
@@ -42,18 +50,19 @@ class MQTTService {
   }
 
   mergeSensorData(newData) {
-    Object.keys(newData).forEach(nodeId => {
-      if (this.sensorData[nodeId]) {
-        this.sensorData[nodeId] = {
-          ...this.sensorData[nodeId],
-          ...newData[nodeId]
+    Object.keys(newData).forEach(key => {
+      if (key === 'switchStates') {
+        this.switchStates = { ...this.switchStates, ...newData.switchStates };
+      } else if (this.sensorData[key]) {
+        this.sensorData[key] = {
+          ...this.sensorData[key],
+          ...newData[key]
         };
       }
     });
   }
 
   connect() {
-    // Incoming messages
     this.client = mqtt.connect(MQTT_RECEIVE_BROKER, {
       reconnectPeriod: 5000,
       connectTimeout: 3000
@@ -62,6 +71,15 @@ class MQTTService {
     this.client.on('connect', () => {
       console.log('✅ Connected to MQTT Broker for receiving');
       this.client.subscribe(RECEIVE_TOPIC);
+
+      // Re-send last known switch states
+      Object.entries(this.switchStates).forEach(([id, state]) => {
+        const config = this.getSwitchConfigById(id);
+        if (config) {
+          const message = `${config.nodeId};${config.childId};1;0;2;${state ? '1' : '0'}`;
+          this.publishToControlBroker(message);
+        }
+      });
     });
 
     this.client.on('message', (topic, message) => {
@@ -69,7 +87,6 @@ class MQTTService {
       if (data) this.updateSensor(data);
     });
 
-    // Outgoing messages
     this.publishClient = mqtt.connect(MQTT_PUBLISH_BROKER, {
       reconnectPeriod: 5000,
       connectTimeout: 3000
@@ -80,22 +97,13 @@ class MQTTService {
     });
   }
 
-  /**
-   * ✅ Use this to send control messages (e.g., switch toggles)
-   */
   publishToControlBroker(message) {
     if (this.publishClient && this.publishClient.connected) {
       this.publishClient.publish(PUBLISH_TOPIC, message, {}, err => {
-        if (err) {
-          console.error('❌ Error publishing:', err);
-        } else {
-          console.log(`📤 Published to ${PUBLISH_TOPIC}:`, message);
-        }
+        if (err) console.error('❌ Error publishing:', err);
       });
-    } else {
-      console.warn('⚠️ Publish client not connected. Message not sent:', message);
     }
-  }  
+  }
 
   parseMessage(rawMessage) {
     const parts = rawMessage.split(';');
@@ -106,7 +114,6 @@ class MQTTService {
     const payload = parts[5];
     const timestamp = new Date().toLocaleTimeString();
 
-    // Motion sensors
     if (nodeId === '12' || nodeId === '26') {
       return {
         nodeId,
@@ -115,7 +122,6 @@ class MQTTService {
       };
     }
 
-    // Environment sensors
     const value = parseFloat(payload);
     if (isNaN(value)) return null;
 
@@ -133,22 +139,36 @@ class MQTTService {
       ...this.sensorData[nodeId],
       ...newData
     };
-
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.sensorData));
     this.notifySubscribers();
     this.syncWithServer();
   }
 
+  updateSwitchStates(newStates) {
+    this.switchStates = { ...this.switchStates, ...newStates };
+    localStorage.setItem(STORAGE_SWITCH_KEY, JSON.stringify(this.switchStates));
+    this.syncWithServer();
+  }
+
   async syncWithServer() {
     try {
+      const payload = {
+        ...this.sensorData,
+        switchStates: this.switchStates
+      };
       await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.sensorData)
+        body: JSON.stringify(payload)
       });
     } catch (error) {
       console.error('Sync failed:', error);
     }
+  }
+
+  getSwitchConfigById(id) {
+    // optional: map switch ID to config (hardcoded or imported)
+    return null; // Implement if needed
   }
 
   subscribe(callback) {
@@ -158,18 +178,12 @@ class MQTTService {
   }
 
   notifySubscribers() {
-    this.subscribers.forEach(callback => callback({ sensorData: this.sensorData }));
+    this.subscribers.forEach(cb => cb({ sensorData: this.sensorData }));
   }
 
   disconnect() {
-    if (this.client) {
-      this.client.end();
-      console.log('🔌 Disconnected from receive broker');
-    }
-    if (this.publishClient) {
-      this.publishClient.end();
-      console.log('🔌 Disconnected from publish broker');
-    }
+    if (this.client) this.client.end();
+    if (this.publishClient) this.publishClient.end();
   }
 }
 

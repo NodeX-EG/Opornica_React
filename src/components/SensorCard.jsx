@@ -1,43 +1,24 @@
+// SensorCard.jsx
 import React from 'react';
-import { WiHumidity, WiBarometer, WiThermometer, WiTime8 } from 'react-icons/wi';
 
-const SensorCard = ({ 
-  name = "Sensor", 
-  temperature = 0, 
-  humidity = 0, 
-  pressure, 
-  lastUpdate = "Never",
-  compact 
-}) => {
+const SensorCard = ({ temperature, pressure, humidity, lastUpdate, compact }) => {
   return (
     <div className={`sensor-card ${compact ? 'compact' : ''}`}>
-      <h3>{name}</h3>
-      
-      {compact ? (
-        <div className="compact-values">
-          <div className="compact-metric">
-            <WiThermometer size={18} />
-            <span>{temperature.toFixed(1)}°C</span>
-          </div>
-          <div className="compact-metric">
-            <WiHumidity size={18} />
-            <span>{humidity.toFixed(0)}%</span>
-          </div>
-          {pressure !== undefined && (
-            <div className="compact-metric">
-              <WiBarometer size={18} />
-              <span>{pressure.toFixed(0)}hPa</span>
-            </div>
-          )}
-          <div className="compact-update">
-            <WiTime8 size={14} />
-            <span>{lastUpdate}</span>
-          </div>
+      <div className="sensor-values">
+        <div className="sensor-value">
+          <span className="label">🌡 Temp:</span>
+          <span className="value">{temperature ?? '--'}°C</span>
         </div>
-      ) : (
-        // Original detailed view would go here
-        null
-      )}
+        <div className="sensor-value">
+          <span className="label">💨 Pressure:</span>
+          <span className="value">{pressure ?? '--'} hPa</span>
+        </div>
+        <div className="sensor-value">
+          <span className="label">💧 Humidity:</span>
+          <span className="value">{humidity ?? '--'}%</span>
+        </div>
+      </div>
+      <div className="last-update">🕒 {lastUpdate || 'N/A'}</div>
     </div>
   );
 };

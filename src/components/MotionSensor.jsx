@@ -1,16 +1,19 @@
+// MotionSensor.jsx
 import React from 'react';
-import { WiTime8 } from 'react-icons/wi';
 
-const MotionSensor = ({ name = "Motion Sensor", motion = false, lastUpdate = "Never" }) => {
+const MotionSensor = ({ motion, lastUpdate }) => {
   return (
-    <div className={`motion-sensor ${motion ? 'active' : ''}`}>
-      <div className="motion-indicator">
-        <div className="motion-light" />
-        <span>{name}</span>
+    <div className={`motion-sensor ${motion ? 'motion-detected' : 'no-motion'}`}>
+      <div className="status-icon">
+        {motion ? '🟢' : '⚪'}
       </div>
-      <div className="motion-update">
-        <WiTime8 size={14} />
-        <span>{lastUpdate}</span>
+      <div className="sensor-info">
+        <div className="status-text">
+          {motion ? 'Kretanje detektovano' : 'Pokret'}
+        </div>
+        <div className="last-update">
+          🕒 {lastUpdate || 'N/A'}
+        </div>
       </div>
     </div>
   );
