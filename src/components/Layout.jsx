@@ -80,14 +80,14 @@ const Layout = () => {
       </div>
 
       <div className="sensor-row">
-        <SensorCard compact {...sensorData[11]} />
-        <SensorCard compact {...sensorData[15]} />
-        <SensorCard compact {...sensorData[25]} />
+        <SensorCard compact label="Sprat" {...sensorData[11]} />
+        <SensorCard compact label="Spolja" {...sensorData[15]} />
+        <SensorCard compact label="Podrum" {...sensorData[25]} />
       </div>
 
       <div className="motion-sensors">
-        <MotionSensor {...sensorData[12]} />
-        <MotionSensor {...sensorData[26]} />
+        <MotionSensor label="Sprat" {...sensorData[12]} />
+        <MotionSensor label="Prizemlje" {...sensorData[26]} />
       </div>
 
       <div className="switches-panel">

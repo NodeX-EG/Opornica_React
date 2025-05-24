@@ -1,9 +1,11 @@
-// SensorCard.jsx
 import React from 'react';
 
-const SensorCard = ({ temperature, pressure, humidity, lastUpdate, compact }) => {
+const SensorCard = ({ label, temperature, pressure, humidity, lastUpdate, compact }) => {
   return (
     <div className={`sensor-card ${compact ? 'compact' : ''}`}>
+      <div className="sensor-header">
+        <h3 className="sensor-label">{label}</h3>
+      </div>
       <div className="sensor-values">
         <div className="sensor-value">
           <span className="label">🌡 Temp:</span>
